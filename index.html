@@ -87,7 +87,7 @@
         border-radius: 12px;
       }
 
-      /* === 保留：獨立功能區塊樣式 (時鐘/農曆) === */
+      /* === 保留：獨立功能區塊樣式 (時訊/圖表) === */
       .function-block {
         background: var(--ac-cream);
         border-radius: 20px;
@@ -113,6 +113,8 @@
         align-items: center;
         justify-content: center;
         color: var(--ac-dark);
+        /* 確保圖表不會被隱藏 */
+        overflow: hidden;
       }
 
       .block-content .time-display {
@@ -125,6 +127,12 @@
       .block-content .date-display {
         font-size: 1rem;
         opacity: 0.8;
+      }
+
+      /* 降雨圖表特有樣式 */
+      #rainChart {
+        /* 使用動森風格的綠色作為降雨趨勢的顏色 */
+        --rain-color: var(--ac-green);
       }
       /* ========================================= */
 
@@ -324,10 +332,27 @@
         <div class="block-title">📅 後山時訊</div>
         <div id="dateTimePill" class="block-content"></div>
       </div>
+
       <div id="heroCard"></div>
 
       <h3 class="section-title">稍後預報</h3>
       <div class="scroll-container" id="futureForecasts"></div>
+
+      <div id="rainChartBlock" class="function-block" style="margin-top: 25px">
+        <div class="block-title">💧 降雨趨勢分析</div>
+        <div class="block-content">
+          <canvas
+            id="rainChart"
+            width="500"
+            height="150"
+            style="max-width: 100%"
+          ></canvas>
+          <div
+            id="rainChartLegend"
+            style="font-size: 0.9rem; margin-top: 10px; color: var(--ac-dark)"
+          ></div>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -373,7 +398,6 @@
         return "深夜";
       }
 
-      // === 保留：更新時鐘、日期和農曆的核心函式 ===
       function updateClockAndDate() {
         const now = new Date();
         const dateTimePill = document.getElementById("dateTimePill");
@@ -414,12 +438,116 @@
             <div class="date-display">${lunarDate} (${dateString})</div>
         `;
       }
-      // =========================================
+
+      // === 新增：繪製降雨波段圖的函式 ===
+      function drawRainChart(forecasts) {
+        const canvas = document.getElementById("rainChart");
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+
+        // 確保在重新繪製時清除上次的內容
+        const WIDTH = canvas.width;
+        const HEIGHT = canvas.height;
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+        // 限制只取未來 6 個時段的數據 (包含當前時段)
+        const data = forecasts.slice(0, 6).map((f) => ({
+          rain: parseInt(f.rain),
+          hour: new Date(f.startTime).getHours(),
+        }));
+
+        // 數據點少於 2 個則不繪製
+        if (data.length < 2) return;
+
+        const maxValue = 100; // 降雨機率最大值
+        const padding = 20;
+        const chartWidth = WIDTH - 2 * padding;
+        const chartHeight = HEIGHT - 2 * padding;
+
+        const stepX = chartWidth / (data.length - 1);
+
+        // 顏色和樣式
+        const chartColor = getComputedStyle(canvas)
+          .getPropertyValue("--ac-green")
+          .trim();
+        ctx.font = '10px "Zen Maru Gothic"';
+        ctx.fillStyle = "var(--ac-dark)";
+        ctx.textAlign = "center";
+
+        // 繪製波段圖
+        ctx.beginPath();
+        // 起點 (左下角)
+        ctx.moveTo(padding, HEIGHT - padding);
+
+        let points = [];
+        data.forEach((item, i) => {
+          const x = padding + i * stepX;
+          // 降雨機率越高，y值越低 (因為 0% 在底部，100% 在頂部)
+          const y = HEIGHT - padding - (item.rain / maxValue) * chartHeight;
+          points.push({ x, y, rain: item.rain });
+
+          // 繪製線條
+          ctx.lineTo(x, y);
+        });
+
+        // 終點 (右下角)
+        ctx.lineTo(WIDTH - padding, HEIGHT - padding);
+        ctx.closePath();
+
+        // 填充漸層 (動森風格的綠色到淺綠色)
+        const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+        gradient.addColorStop(0, `rgba(125, 225, 169, 0.7)`); // --ac-green
+        gradient.addColorStop(1, `rgba(125, 225, 169, 0.2)`);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // 繪製邊界線
+        ctx.strokeStyle = chartColor;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // 繪製數據點和數值
+        ctx.fillStyle = "var(--ac-dark)";
+        points.forEach((p) => {
+          // 畫降雨機率數值
+          ctx.fillText(`${p.rain}%`, p.x, p.y - 10);
+
+          // 畫圓點
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = chartColor;
+          ctx.fill();
+          ctx.strokeStyle = "white";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+
+        // 繪製 X 軸標籤 (時間) 和底部邊界
+        ctx.strokeStyle = "#ccc";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, HEIGHT - padding);
+        ctx.lineTo(WIDTH - padding, HEIGHT - padding);
+        ctx.stroke();
+
+        let legendHtml = "";
+        data.forEach((item, i) => {
+          const period = getTimePeriod(new Date().setHours(item.hour));
+          // 顯示小時數 14:00
+          const hourString = item.hour.toString().padStart(2, "0") + ":00";
+          legendHtml += `<span style="display:inline-block; min-width: 16%;">${
+            i === 0 ? "現在" : hourString
+          }</span>`;
+        });
+
+        document.getElementById("rainChartLegend").innerHTML = legendHtml;
+      }
+      // ===================================
 
       function renderWeather(data) {
         const forecasts = data.forecasts;
 
-        // 恢復到初始狀態：current 為第一個時段，others 為後續所有時段
         const current = forecasts[0];
         const others = forecasts.slice(1);
 
@@ -472,9 +600,6 @@
         const scrollContainer = document.getElementById("futureForecasts");
         scrollContainer.innerHTML = "";
 
-        // **移除手動插入 next 卡片的邏輯**
-
-        // 抓今天的日期數字 (例如 24)
         const todayDate = new Date().getDate();
 
         // 遍歷 others (索引 1 之後的資料)
@@ -503,7 +628,10 @@
                         `;
         });
 
-        // 3. 右上角顯示今日日期 (ID 恢復為原始的 updateTime)
+        // 3. 繪製降雨圖表 (新增調用)
+        drawRainChart(forecasts);
+
+        // 4. 右上角顯示今日日期
         const now = new Date();
         const month = now.getMonth() + 1;
         const date = now.getDate();
@@ -543,7 +671,6 @@
         }
       }
 
-      // === 保留：啟動天氣資料抓取，並啟動時鐘更新的邏輯 ===
       document.addEventListener("DOMContentLoaded", () => {
         fetchWeather();
 
@@ -551,7 +678,6 @@
         updateClockAndDate();
         setInterval(updateClockAndDate, 1000);
       });
-      // =========================================
     </script>
   </body>
 </html>
