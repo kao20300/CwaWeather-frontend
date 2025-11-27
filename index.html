@@ -56,9 +56,11 @@
 
       /* 頂部狀態列 */
       .status-bar {
+        /* 將 layout 從 space-between 改為 space-around，並允許換行 */
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap; /* 允許在小螢幕上換行 */
         padding: 15px 20px;
         background: rgba(255, 255, 255, 0.3);
         backdrop-filter: blur(10px);
@@ -77,6 +79,21 @@
         transform: rotate(-2deg);
         border: 2px solid white;
         box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+      }
+
+      /* 新增/修改：讓日期時間區塊能填滿中間空間 */
+      .date-time-pill {
+        flex-grow: 1; /* 讓它佔據中間大部分空間 */
+        text-align: center; /* 內容居中 */
+        margin: 0 10px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.2);
+        color: white;
+        font-weight: bold;
+      }
+      .date-time-pill > div {
+        line-height: 1.2;
       }
 
       .update-pill {
@@ -228,6 +245,17 @@
       }
 
       .mini-time {
+        min-width: 140px;
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 25px;
+        padding: 20px 15px;
+        text-align: center;
+        border: 3px solid white;
+        flex-shrink: 0;
+        /* 防止被擠壓 */
+      }
+
+      .mini-time {
         background: var(--ac-green);
         color: white;
         padding: 3px 10px;
@@ -275,7 +303,8 @@
     </div>
     <div class="status-bar">
       <div class="location-pill">📍 後山</div>
-      <div id="updateTime" class="update-pill">更新中...</div>
+      <div id="dateTimePill" class="date-time-pill">載入時間中...</div>
+      <div id="weatherUpdateTime" class="update-pill">更新中...</div>
     </div>
 
     <div class="container" id="mainContent" style="display: none">
@@ -327,6 +356,55 @@
         if (hour >= 18 && hour < 23) return "晚上";
         return "深夜";
       }
+
+      // === 新增：更新時鐘、日期和農曆的函式 ===
+      function updateClockAndDate() {
+        const now = new Date();
+        const dateTimePill = document.getElementById("dateTimePill");
+
+        // 1. 取得時間 (HH:MM:SS)
+        const time = now.toLocaleTimeString("zh-TW", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false, // 24小時制
+          timeZone: "Asia/Taipei",
+        });
+
+        // 2. 取得公曆日期 (月/日 星期)
+        const dateString = now.toLocaleDateString("zh-TW", {
+          month: "2-digit",
+          day: "2-digit",
+          weekday: "short", // 簡短星期幾 (週三)
+          timeZone: "Asia/Taipei",
+        });
+
+        // 3. 取得農曆日期
+        let lunarDate = "農曆載入中";
+        try {
+          // 使用 toLocaleString 的 Unicode 擴展 'ca-chinese' 取得農曆 (Source 1.5)
+          const lunarDateFull = now.toLocaleDateString("zh-TW-u-ca-chinese", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            timeZone: "Asia/Taipei",
+          });
+
+          // 農曆會回傳如 "癸卯年十二月二十五日"，我們只取月日部分
+          const lunarDateMatch = lunarDateFull.match(/年(.+)/);
+          lunarDate = lunarDateMatch ? lunarDateMatch[1] : lunarDateFull;
+        } catch (e) {
+          console.error("Lunar calendar extension not fully supported:", e);
+          lunarDate = "農曆資訊不可用"; // Fallback
+        }
+
+        // 4. 組合顯示
+        dateTimePill.innerHTML = `
+            <div style="font-size: 1rem; font-weight: 700; line-height: 1;">${time}</div>
+            <div style="font-size: 0.75rem; opacity: 0.8;">${lunarDate} (${dateString})</div>
+        `;
+      }
+      // === 函式結束 ===
 
       function renderWeather(data) {
         const forecasts = data.forecasts;
@@ -410,7 +488,7 @@
                         `;
         });
 
-        // 3. 右上角顯示今日日期
+        // 3. 右上角顯示今日日期 (已將 ID 從 updateTime 改為 weatherUpdateTime)
         const now = new Date();
         const month = now.getMonth() + 1;
         const date = now.getDate();
@@ -418,7 +496,7 @@
         const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
         document.getElementById(
-          "updateTime"
+          "weatherUpdateTime"
         ).textContent = `${month}月${date}日 ${days[dayIndex]}`;
       }
 
@@ -451,7 +529,14 @@
         }
       }
 
-      document.addEventListener("DOMContentLoaded", fetchWeather);
+      // DOMContentLoaded 時，執行抓取天氣資料，並啟動時鐘
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchWeather();
+
+        // 首次執行時鐘，並設定每秒更新
+        updateClockAndDate();
+        setInterval(updateClockAndDate, 1000);
+      });
     </script>
   </body>
 </html>
