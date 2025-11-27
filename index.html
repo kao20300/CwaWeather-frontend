@@ -54,13 +54,12 @@
         padding-bottom: 20px;
       }
 
-      /* 頂部狀態列 */
+      /* 頂部狀態列 (恢復為兩項佈局) */
       .status-bar {
-        /* *** 變更 1：允許在小螢幕上換行，並調整對齊 *** */
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap; /* 允許在小螢幕上換行 */
+        flex-wrap: nowrap; /* 頂部狀態列不換行 */
         padding: 15px 20px;
         background: rgba(255, 255, 255, 0.3);
         backdrop-filter: blur(10px);
@@ -81,22 +80,6 @@
         box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
       }
 
-      /* *** 變更 2：新增：日期時間區塊樣式 *** */
-      .date-time-pill {
-        flex-grow: 1; /* 讓它佔據中間大部分空間 */
-        text-align: center; /* 內容居中 */
-        margin: 0 10px;
-        padding: 4px 10px;
-        border-radius: 12px;
-        background: rgba(0, 0, 0, 0.2);
-        color: white;
-        font-weight: bold;
-      }
-      .date-time-pill > div {
-        line-height: 1.2;
-      }
-      /* *** 變更 2 結束 *** */
-
       .update-pill {
         font-size: 0.8rem;
         color: white;
@@ -104,6 +87,47 @@
         padding: 4px 10px;
         border-radius: 12px;
       }
+
+      /* === 新增：獨立功能區塊樣式 (取代 status-bar 中間的 pill) === */
+      .function-block {
+        background: var(--ac-cream);
+        border-radius: 20px;
+        padding: 15px 20px;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        border: 3px solid var(--ac-card-border); /* 略微不同的邊框顏色 */
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .block-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--ac-blue);
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px dashed var(--ac-card-border);
+      }
+
+      .block-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--ac-dark);
+      }
+
+      .block-content .time-display {
+        font-size: 1.8rem; /* 時間放大 */
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 3px;
+      }
+
+      .block-content .date-display {
+        font-size: 1rem;
+        opacity: 0.8;
+      }
+      /* === 獨立功能區塊樣式結束 === */
 
       .container {
         padding: 20px;
@@ -293,11 +317,14 @@
     </div>
     <div class="status-bar">
       <div class="location-pill">📍 後山</div>
-      <div id="dateTimePill" class="date-time-pill">載入時間中...</div>
       <div id="weatherUpdateTime" class="update-pill">更新中...</div>
     </div>
 
     <div class="container" id="mainContent" style="display: none">
+      <div id="dateTimeBlock" class="function-block">
+        <div class="block-title">📅 後山時訊</div>
+        <div id="dateTimePill" class="block-content"></div>
+      </div>
       <div id="heroCard"></div>
 
       <h3 class="section-title">稍後預報</h3>
@@ -347,7 +374,7 @@
         return "深夜";
       }
 
-      // === 變更 4：新增：更新時鐘、日期和農曆的核心函式 ===
+      // === 變更 3：更新時鐘、日期和農曆的核心函式 (內容微調以適應新 CSS class) ===
       function updateClockAndDate() {
         const now = new Date();
         const dateTimePill = document.getElementById("dateTimePill");
@@ -369,10 +396,9 @@
           timeZone: "Asia/Taipei",
         });
 
-        // 3. 取得農曆日期 (使用國際化 API 的 Unicode 擴展)
+        // 3. 取得農曆日期
         let lunarDate = "農曆載入中";
         try {
-          // 使用 'ca-chinese' 取得農曆
           const lunarDateFull = now.toLocaleDateString("zh-TW-u-ca-chinese", {
             year: "numeric",
             month: "long",
@@ -380,21 +406,21 @@
             timeZone: "Asia/Taipei",
           });
 
-          // 農曆會回傳如 "癸卯年十二月二十五日"，我們只取月日部分
+          // 提取月日部分
           const lunarDateMatch = lunarDateFull.match(/年(.+)/);
           lunarDate = lunarDateMatch ? lunarDateMatch[1] : lunarDateFull;
         } catch (e) {
           console.error("Lunar calendar extension not fully supported:", e);
-          lunarDate = "農曆資訊不可用"; // Fallback
+          lunarDate = "農曆資訊不可用";
         }
 
-        // 4. 組合顯示
+        // 4. 組合顯示 (使用新的 class: time-display / date-display)
         dateTimePill.innerHTML = `
-            <div style="font-size: 1rem; font-weight: 700; line-height: 1;">${time}</div>
-            <div style="font-size: 0.75rem; opacity: 0.8;">${lunarDate} (${dateString})</div>
+            <div class="time-display">${time}</div>
+            <div class="date-display">${lunarDate} (${dateString})</div>
         `;
       }
-      // === 變更 4 結束 ===
+      // === 變更 3 結束 ===
 
       function renderWeather(data) {
         const forecasts = data.forecasts;
@@ -478,13 +504,14 @@
                         `;
         });
 
-        // 3. 右上角顯示今日日期 (已將 ID 從 updateTime 改為 weatherUpdateTime)
+        // 3. 右上角顯示今日日期
         const now = new Date();
         const month = now.getMonth() + 1;
         const date = now.getDate();
         const dayIndex = now.getDay();
         const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
+        // *** 變更 4：將 ID 從 updateTime 改為 weatherUpdateTime ***
         document.getElementById(
           "weatherUpdateTime"
         ).textContent = `${month}月${date}日 ${days[dayIndex]}`;
@@ -501,7 +528,6 @@
           const fetchPromise = fetch(API_URL).then((res) => res.json());
 
           // 3. Promise.all 會等待「兩個都完成」才會往下走
-          // result 陣列裡，第一個是 delay 的結果(沒用到)，第二個是 api 的 json 資料
           const [_, json] = await Promise.all([delayPromise, fetchPromise]);
 
           if (json.success) {
@@ -519,7 +545,7 @@
         }
       }
 
-      // === 變更 5：啟動天氣資料抓取，並啟動時鐘更新 ===
+      // === 變更 5：在 DOMContentLoaded 時，執行所有啟動邏輯 ===
       document.addEventListener("DOMContentLoaded", () => {
         fetchWeather();
 
