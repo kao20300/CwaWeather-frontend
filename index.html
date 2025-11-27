@@ -54,12 +54,11 @@
         padding-bottom: 20px;
       }
 
-      /* 頂部狀態列恢復為兩項佈局 */
+      /* 頂部狀態列 (原始的兩項佈局) */
       .status-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-wrap: nowrap; /* 頂部狀態列不換行 */
         padding: 15px 20px;
         background: rgba(255, 255, 255, 0.3);
         backdrop-filter: blur(10px);
@@ -88,7 +87,7 @@
         border-radius: 12px;
       }
 
-      /* 新增：獨立功能區塊樣式 (時鐘/農曆) */
+      /* === 保留：獨立功能區塊樣式 (時鐘/農曆) === */
       .function-block {
         background: var(--ac-cream);
         border-radius: 20px;
@@ -127,6 +126,7 @@
         font-size: 1rem;
         opacity: 0.8;
       }
+      /* ========================================= */
 
       .container {
         padding: 20px;
@@ -316,7 +316,7 @@
     </div>
     <div class="status-bar">
       <div class="location-pill">📍 後山</div>
-      <div id="weatherUpdateTime" class="update-pill">更新中...</div>
+      <div id="updateTime" class="update-pill">更新中...</div>
     </div>
 
     <div class="container" id="mainContent" style="display: none">
@@ -324,7 +324,6 @@
         <div class="block-title">📅 後山時訊</div>
         <div id="dateTimePill" class="block-content"></div>
       </div>
-
       <div id="heroCard"></div>
 
       <h3 class="section-title">稍後預報</h3>
@@ -374,6 +373,7 @@
         return "深夜";
       }
 
+      // === 保留：更新時鐘、日期和農曆的核心函式 ===
       function updateClockAndDate() {
         const now = new Date();
         const dateTimePill = document.getElementById("dateTimePill");
@@ -414,16 +414,14 @@
             <div class="date-display">${lunarDate} (${dateString})</div>
         `;
       }
+      // =========================================
 
       function renderWeather(data) {
         const forecasts = data.forecasts;
 
-        // current: 當前主要顯示的時段 (索引 0)
+        // 恢復到初始狀態：current 為第一個時段，others 為後續所有時段
         const current = forecasts[0];
-        // next: 下一個時段，即「前一時段」 (索引 1)
-        const next = forecasts[1];
-        // others: 從第三個時段開始，才是真正的「稍後預報」 (索引 2 之後)
-        const others = forecasts.slice(2);
+        const others = forecasts.slice(1);
 
         // 1. 渲染 Hero Card (主畫面) - 使用 current (索引 0)
         const advice = getAdvice(current.rain, current.maxTemp);
@@ -474,26 +472,12 @@
         const scrollContainer = document.getElementById("futureForecasts");
         scrollContainer.innerHTML = "";
 
-        // 將 next (索引 1) 資料插入滾動容器的最前面
-        if (next) {
-          const nextPeriod = getTimePeriod(next.startTime);
-          scrollContainer.innerHTML += `
-                <div class="mini-card" style="background:var(--ac-yellow); border:3px solid white;">
-                    <div class="mini-time" style="background:var(--ac-brown); color:white;">${nextPeriod}</div>
-                    <div class="mini-icon">${getWeatherIcon(next.weather)}</div>
-                    <div class="mini-temp">${next.minTemp}° - ${
-            next.maxTemp
-          }°</div>
-                    <div style="font-size:0.8rem; color:#888; margin-top:5px;">💧${
-                      next.rain
-                    }</div>
-                </div>
-            `;
-        }
+        // **移除手動插入 next 卡片的邏輯**
 
-        // 遍歷 others (索引 2 之後的資料)
+        // 抓今天的日期數字 (例如 24)
         const todayDate = new Date().getDate();
 
+        // 遍歷 others (索引 1 之後的資料)
         others.forEach((f) => {
           let p = getTimePeriod(f.startTime);
 
@@ -519,7 +503,7 @@
                         `;
         });
 
-        // 3. 右上角顯示今日日期
+        // 3. 右上角顯示今日日期 (ID 恢復為原始的 updateTime)
         const now = new Date();
         const month = now.getMonth() + 1;
         const date = now.getDate();
@@ -527,7 +511,7 @@
         const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
         document.getElementById(
-          "weatherUpdateTime"
+          "updateTime"
         ).textContent = `${month}月${date}日 ${days[dayIndex]}`;
       }
 
@@ -559,6 +543,7 @@
         }
       }
 
+      // === 保留：啟動天氣資料抓取，並啟動時鐘更新的邏輯 ===
       document.addEventListener("DOMContentLoaded", () => {
         fetchWeather();
 
@@ -566,6 +551,7 @@
         updateClockAndDate();
         setInterval(updateClockAndDate, 1000);
       });
+      // =========================================
     </script>
   </body>
 </html>
