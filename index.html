@@ -56,7 +56,7 @@
 
       /* 頂部狀態列 */
       .status-bar {
-        /* 將 layout 從 space-between 改為 space-around，並允許換行 */
+        /* *** 變更 1：允許在小螢幕上換行，並調整對齊 *** */
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -81,7 +81,7 @@
         box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
       }
 
-      /* 新增/修改：讓日期時間區塊能填滿中間空間 */
+      /* *** 變更 2：新增：日期時間區塊樣式 *** */
       .date-time-pill {
         flex-grow: 1; /* 讓它佔據中間大部分空間 */
         text-align: center; /* 內容居中 */
@@ -95,6 +95,7 @@
       .date-time-pill > div {
         line-height: 1.2;
       }
+      /* *** 變更 2 結束 *** */
 
       .update-pill {
         font-size: 0.8rem;
@@ -245,17 +246,6 @@
       }
 
       .mini-time {
-        min-width: 140px;
-        background: rgba(255, 255, 255, 0.85);
-        border-radius: 25px;
-        padding: 20px 15px;
-        text-align: center;
-        border: 3px solid white;
-        flex-shrink: 0;
-        /* 防止被擠壓 */
-      }
-
-      .mini-time {
         background: var(--ac-green);
         color: white;
         padding: 3px 10px;
@@ -357,7 +347,7 @@
         return "深夜";
       }
 
-      // === 新增：更新時鐘、日期和農曆的函式 ===
+      // === 變更 4：新增：更新時鐘、日期和農曆的核心函式 ===
       function updateClockAndDate() {
         const now = new Date();
         const dateTimePill = document.getElementById("dateTimePill");
@@ -379,10 +369,10 @@
           timeZone: "Asia/Taipei",
         });
 
-        // 3. 取得農曆日期
+        // 3. 取得農曆日期 (使用國際化 API 的 Unicode 擴展)
         let lunarDate = "農曆載入中";
         try {
-          // 使用 toLocaleString 的 Unicode 擴展 'ca-chinese' 取得農曆 (Source 1.5)
+          // 使用 'ca-chinese' 取得農曆
           const lunarDateFull = now.toLocaleDateString("zh-TW-u-ca-chinese", {
             year: "numeric",
             month: "long",
@@ -404,7 +394,7 @@
             <div style="font-size: 0.75rem; opacity: 0.8;">${lunarDate} (${dateString})</div>
         `;
       }
-      // === 函式結束 ===
+      // === 變更 4 結束 ===
 
       function renderWeather(data) {
         const forecasts = data.forecasts;
@@ -529,7 +519,7 @@
         }
       }
 
-      // DOMContentLoaded 時，執行抓取天氣資料，並啟動時鐘
+      // === 變更 5：啟動天氣資料抓取，並啟動時鐘更新 ===
       document.addEventListener("DOMContentLoaded", () => {
         fetchWeather();
 
@@ -537,6 +527,7 @@
         updateClockAndDate();
         setInterval(updateClockAndDate, 1000);
       });
+      // === 變更 5 結束 ===
     </script>
   </body>
 </html>
