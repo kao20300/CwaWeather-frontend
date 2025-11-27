@@ -418,14 +418,12 @@
       function renderWeather(data) {
         const forecasts = data.forecasts;
 
-        // *** 變更 1：重新定義預報時段 ***
         // current: 當前主要顯示的時段 (索引 0)
         const current = forecasts[0];
         // next: 下一個時段，即「前一時段」 (索引 1)
         const next = forecasts[1];
         // others: 從第三個時段開始，才是真正的「稍後預報」 (索引 2 之後)
         const others = forecasts.slice(2);
-        // *** 變更 1 結束 ***
 
         // 1. 渲染 Hero Card (主畫面) - 使用 current (索引 0)
         const advice = getAdvice(current.rain, current.maxTemp);
@@ -476,7 +474,7 @@
         const scrollContainer = document.getElementById("futureForecasts");
         scrollContainer.innerHTML = "";
 
-        // *** 變更 2：將 next (索引 1) 資料插入滾動容器的最前面 ***
+        // 將 next (索引 1) 資料插入滾動容器的最前面
         if (next) {
           const nextPeriod = getTimePeriod(next.startTime);
           scrollContainer.innerHTML += `
@@ -492,12 +490,10 @@
                 </div>
             `;
         }
-        // *** 變更 2 結束 ***
-
-        // 抓今天的日期數字 (例如 24)
-        const todayDate = new Date().getDate();
 
         // 遍歷 others (索引 2 之後的資料)
+        const todayDate = new Date().getDate();
+
         others.forEach((f) => {
           let p = getTimePeriod(f.startTime);
 
